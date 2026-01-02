@@ -1,13 +1,72 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Demo Betting App</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <script>
-    window.location.href = "https://t.me/ODA_MRbot";
-  </script>
+    <title>Demo Betting WebApp</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 0;
+            background: #1e1e2f;
+            color: #fff;
+        }
+        h1 { margin-top: 20px; }
+        #balance { font-size: 22px; margin: 15px 0; }
+        .btn {
+            padding: 15px 25px;
+            margin: 10px;
+            font-size: 18px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .btn:hover { opacity: 0.8; }
+        .win { background-color: #4CAF50; color: white; }
+        .lose { background-color: #f44336; color: white; }
+        #history { margin-top: 20px; font-size: 16px; max-height: 200px; overflow-y: auto; text-align: left; padding: 0 20px; }
+    </style>
 </head>
 <body>
-  Redirecting to app...
+
+<h1>🎲 Demo Betting WebApp</h1>
+<p>Play with demo coins. No real money!</p>
+
+<div id="balance">Balance: 1000 💰</div>
+
+<div>
+    <button class="btn win" onclick="bet(100)">Bet 100</button>
+    <button class="btn win" onclick="bet(200)">Bet 200</button>
+    <button class="btn lose" onclick="bet(500)">Bet 500</button>
+</div>
+
+<h3>History</h3>
+<div id="history"></div>
+
+<script>
+let balance = 1000;
+let history = [];
+
+function bet(amount) {
+    let win = Math.random() < 0.5;
+    if (win) {
+        balance += amount;
+        addHistory(`🎉 Won ${amount} coins`);
+    } else {
+        balance -= amount;
+        addHistory(`💀 Lost ${amount} coins`);
+    }
+    document.getElementById("balance").innerText = "Balance: " + balance + " 💰";
+}
+
+function addHistory(text) {
+    history.unshift(text);
+    if (history.length > 10) history.pop();
+    document.getElementById("history").innerHTML = history.join("<br>");
+}
+</script>
+
 </body>
 </html>
