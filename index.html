@@ -4,30 +4,14 @@
     <title>Demo Betting WebApp</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 0;
-            background: #1e1e2f;
-            color: #fff;
-        }
+        body { font-family: Arial; text-align: center; margin: 0; padding: 0; background: #1e1e2f; color: #fff; }
         h1 { margin-top: 20px; }
         #balance { font-size: 22px; margin: 15px 0; }
-        .btn {
-            padding: 15px 25px;
-            margin: 10px;
-            font-size: 18px;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: 0.2s;
-        }
+        .btn { padding: 15px 25px; margin: 10px; font-size: 18px; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; }
         .btn:hover { opacity: 0.8; }
         .win { background-color: #4CAF50; color: white; }
         .lose { background-color: #f44336; color: white; }
-        #history { margin-top: 20px; font-size: 16px; max-height: 150px; overflow-y: auto; text-align: left; padding: 0 20px; }
-        #leaderboard { margin-top: 20px; font-size: 16px; padding: 0 20px; text-align: left; }
+        #history, #leaderboard { margin-top: 20px; font-size: 16px; max-height: 200px; overflow-y: auto; text-align: left; padding: 0 20px; }
     </style>
 </head>
 <body>
@@ -35,7 +19,7 @@
 <h1>🎲 Demo Betting WebApp</h1>
 <p>Play with demo coins. No real money!</p>
 
-<div id="balance">Balance: 1000 💰</div>
+<div id="balance">Balance: ...</div>
 
 <div>
     <button class="btn win" onclick="bet(100)">Bet 100</button>
@@ -50,46 +34,43 @@
 <div id="leaderboard"></div>
 
 <script>
-let balance = 1000;
+const API = "http://YOUR_SERVER_IP:5000";
+const user_id = Math.floor(Math.random()*1000000); // replace with Telegram user_id if available
+let balance = 0;
 let history = [];
-let leaderboard = [
-    {name: "You", coins: balance},
-    {name: "Bot1", coins: 1200},
-    {name: "Bot2", coins: 1100}
-];
 
-function bet(amount) {
+async function fetchBalance() {
+    const res = await fetch(API + "/api/get_coins", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({user_id})
+    });
+    const data = await res.json();
+    balance = data.coins;
+    document.getElementById("balance").innerText = "Balance: "+balance+" 💰";
+}
+
+async function bet(amount) {
     let win = Math.random() < 0.5;
-    if (win) {
-        balance += amount;
-        addHistory(`🎉 Won ${amount} coins`);
-    } else {
-        balance -= amount;
-        addHistory(`💀 Lost ${amount} coins`);
-    }
-    updateBalance();
-    updateLeaderboard();
-}
-
-function addHistory(text) {
-    history.unshift(text);
-    if (history.length > 10) history.pop();
+    let delta = win ? amount : -amount;
+    balance += delta;
+    history.unshift(win ? `🎉 Won ${amount}` : `💀 Lost ${amount}`);
+    if(history.length>10) history.pop();
     document.getElementById("history").innerHTML = history.join("<br>");
-}
 
-function updateBalance() {
-    document.getElementById("balance").innerText = "Balance: " + balance + " 💰";
-    leaderboard[0].coins = balance; // Update user's coins on leaderboard
-}
+    // Update server
+    const res = await fetch(API + "/api/update_coins", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({user_id, delta})
+    });
+    const data = await res.json();
+    document.getElementById("balance").innerText = "Balance: "+data.balance+" 💰";
 
-function updateLeaderboard() {
-    leaderboard.sort((a,b) => b.coins - a.coins);
-    let board = leaderboard.map((item, i) => `${i+1}. ${item.name}: ${item.coins} 💰`).join("<br>");
+    // Update leaderboard
+    const board = data.leaderboard.map((u,i)=>`${i+1}. User${u[0]}: ${u[1]} 💰`).join("<br>");
     document.getElementById("leaderboard").innerHTML = board;
 }
 
-updateBalance();
-updateLeaderboard();
+fetchBalance();
 </script>
 
 </body>
