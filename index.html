@@ -1,76 +1,92 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Demo Betting WebApp</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body { font-family: Arial; text-align: center; margin: 0; padding: 0; background: #1e1e2f; color: #fff; }
-        h1 { margin-top: 20px; }
-        #balance { font-size: 22px; margin: 15px 0; }
-        .btn { padding: 15px 25px; margin: 10px; font-size: 18px; border: none; border-radius: 10px; cursor: pointer; transition: 0.2s; }
-        .btn:hover { opacity: 0.8; }
-        .win { background-color: #4CAF50; color: white; }
-        .lose { background-color: #f44336; color: white; }
-        #history, #leaderboard { margin-top: 20px; font-size: 16px; max-height: 200px; overflow-y: auto; text-align: left; padding: 0 20px; }
-    </style>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Number Game Web</title>
+<style>
+body { font-family: Arial; text-align:center; background:#1e1e2f; color:white; }
+h1 { margin-top:20px; }
+#balance { font-size:22px; margin:15px 0; }
+.btn { padding:15px 25px; margin:10px; font-size:18px; border:none; border-radius:10px; cursor:pointer; }
+.btn:hover { opacity:0.8; }
+.win { background:#4CAF50; }
+.lose { background:#f44336; }
+#history { margin-top:20px; font-size:16px; max-height:200px; overflow-y:auto; text-align:left; padding:0 20px; }
+</style>
 </head>
 <body>
 
-<h1>🎲 Demo Betting WebApp</h1>
-<p>Play with demo coins. No real money!</p>
-
+<h1>🎲 Number Game</h1>
 <div id="balance">Balance: ...</div>
 
-<div>
-    <button class="btn win" onclick="bet(100)">Bet 100</button>
-    <button class="btn win" onclick="bet(200)">Bet 200</button>
-    <button class="btn lose" onclick="bet(500)">Bet 500</button>
-</div>
+<button class="btn win" onclick="joinGame()">Join Game</button>
+<br>
 
-<h3>History</h3>
+<input type="number" id="num" placeholder="1-100" min="1" max="100">
+<button class="btn lose" onclick="submitNumber()">Submit Number</button>
+
 <div id="history"></div>
 
-<h3>Leaderboard</h3>
-<div id="leaderboard"></div>
-
 <script>
-const API = "http://YOUR_SERVER_IP:5000";
-const user_id = Math.floor(Math.random()*1000000); // replace with Telegram user_id if available
-let balance = 0;
-let history = [];
+// ==== CONFIG ====
+const API = "http://YOUR_SERVER_IP:5000"; // Replace with your Termux / server IP
+const user_id = Math.floor(Math.random()*1000000); // For demo: random user ID
+const chat_id = "demo_chat"; // single chat ID
 
-async function fetchBalance() {
-    const res = await fetch(API + "/api/get_coins", {
-        method:"POST", headers:{"Content-Type":"application/json"},
+// ==== STATE ====
+let balance = 0;
+
+// ==== FUNCTIONS ====
+async function getBalance() {
+    const res = await fetch(API+"/api/get_coins", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
         body: JSON.stringify({user_id})
     });
     const data = await res.json();
     balance = data.coins;
-    document.getElementById("balance").innerText = "Balance: "+balance+" 💰";
+    document.getElementById("balance").innerText = "Balance: "+balance;
 }
 
-async function bet(amount) {
-    let win = Math.random() < 0.5;
-    let delta = win ? amount : -amount;
-    balance += delta;
-    history.unshift(win ? `🎉 Won ${amount}` : `💀 Lost ${amount}`);
-    if(history.length>10) history.pop();
-    document.getElementById("history").innerHTML = history.join("<br>");
-
-    // Update server
-    const res = await fetch(API + "/api/update_coins", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({user_id, delta})
+async function joinGame() {
+    const res = await fetch(API+"/api/join_game", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({user_id, chat_id})
     });
     const data = await res.json();
-    document.getElementById("balance").innerText = "Balance: "+data.balance+" 💰";
-
-    // Update leaderboard
-    const board = data.leaderboard.map((u,i)=>`${i+1}. User${u[0]}: ${u[1]} 💰`).join("<br>");
-    document.getElementById("leaderboard").innerHTML = board;
+    let msg = "";
+    if(data.status==="joined") msg = `✅ Joined Game (${data.players} players)`;
+    else if(data.status==="no_money") msg = "❌ Not enough coins";
+    else msg = "⚠ "+data.status;
+    document.getElementById("history").innerHTML = msg;
+    getBalance();
 }
 
-fetchBalance();
+async function submitNumber() {
+    const number = parseInt(document.getElementById("num").value);
+    if(!number || number<1 || number>100){
+        alert("Number must be 1-100"); return;
+    }
+    const res = await fetch(API+"/api/submit_number", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({user_id, chat_id, number})
+    });
+    const data = await res.json();
+    if(data.status==="ended"){
+        document.getElementById("history").innerHTML =
+            `🏆 Winner: ${data.winner}<br>Target: ${data.target}<br>Prize: ${data.prize}`;
+    } else if(data.status==="already_submitted"){
+        document.getElementById("history").innerHTML = "⚠ Number already submitted";
+    } else {
+        document.getElementById("history").innerHTML = "✅ Number submitted!";
+    }
+    getBalance();
+}
+
+// ==== INIT ====
+getBalance();
 </script>
 
 </body>
